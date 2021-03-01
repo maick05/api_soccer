@@ -1,0 +1,20 @@
+{
+  "name": "servicos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.5",
+    "config": "^3.3.4",
+    "consign": "^0.1.6",
+    "faker": "^4.1.0",
+    "node-libcurl": "^2.3.0",
+    "puppeteer": "^8.0.0",
+    "request": "^2.88.2"
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "rapidApi": {
+        "headers": {
+            "x-rapidapi-key": "7b2bcdc614mshbd4f21d0395fd1cp1663dcjsn9145f69f8996",
+            "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+            "useQueryString": true
+        }
+    }
+}

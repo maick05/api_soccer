@@ -1,9 +1,6 @@
 const cheerio = require('cheerio');
-const request = require('request');
 const config = require('config');
-const CurlService = require('../helpers/curlService');
 const puppeteer = require('puppeteer');
-const { resolve } = require('app-root-path');
 
 class Player{
     getInfoPlayer(nome, club, res){        
@@ -72,7 +69,7 @@ class Player{
                 });
                 
                 const [page] = await browser.pages();
-                await page.goto(urlPlayer, { waitUntil: 'networkidle0' });
+                await page.goto(urlPlayer, { waitUntil: 'networkidle0', timeout: 90000});
                 const data = await page.evaluate(() => document.querySelector('*').outerHTML);
                 var $ = cheerio.load(data);
                 var element = {};

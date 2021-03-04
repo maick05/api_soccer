@@ -1,8 +1,10 @@
 const axios = require('axios');
 const conexao = require('../dal/database/conexao');
-const repositorio = require('../repositories/jogadores');
 const fs = require('fs');
 const appRoot = require('app-root-path');
+const stringHelper = require('../helpers/stringHelper');
+const dateHelper = require('../helpers/dateHelper');
+
 
 class Jogadores {
     getStatsPorId(id) {
@@ -14,34 +16,25 @@ class Jogadores {
 
     async getSkillsPlayer(dadosSerieA){
         return new Promise ( async (resolve, rejected) => {
-            let nome = this.retiraAcentos(dadosSerieA.player_name);
-            let time = this.retiraAcentos(dadosSerieA.team_name);
+            let nome = stringHelper.retirarAcentos(dadosSerieA.player_name);
+            let time = stringHelper.retirarAcentos(dadosSerieA.team_name);
             var fmDBObj = await axios.get(`http://localhost:8082/fm_database/player/${nome}/${time}`);
             resolve(fmDBObj.data);
         });
         
     }
 
-    retiraAcentos(str) {
-        let com_acento = "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝŔÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿŕ";
-        let sem_acento = "AAAAAAACEEEEIIIIDNOOOOOOUUUUYRsBaaaaaaaceeeeiiiionoooooouuuuybyr";
-
-        let novastr="";
-        for(let i=0; i<str.length; i++) {
-            let troca=false;
-            for (let a=0; a<com_acento.length; a++) {
-                if (str.substr(i,1)==com_acento.substr(a,1)) {
-                    novastr+=sem_acento.substr(a,1);
-                    troca=true;
-                    break;
-                }
-            }
-            if (troca==false) {
-                novastr+=str.substr(i,1);
-            }
-        }
-        return novastr;
-    } 
+    getSalaryPlayer(dadosSerieA){
+        return new Promise ( async (resolve, rejected) => {
+            let nome = stringHelper.retirarAcentos(dadosSerieA.player_name);
+            let time = stringHelper.retirarAcentos(dadosSerieA.team_name);
+            let dataNasc = dateHelper.formatDataDB(dadosSerieA.birth_date);
+            
+            var body = await axios.get(`http://localhost:8082/football_life_style/player/${nome}/${time}/${dataNasc}`);
+            resolve(body.data);
+        });
+        
+    }
 
     getStatsPorIdFake(id){
         return new Promise ( (resolve, reject) => {

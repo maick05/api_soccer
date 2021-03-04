@@ -13,9 +13,13 @@ class Jogadores {
 
                     repositorio.getSkillsPlayer(dadosSerieA)
                         .then(async dadosPlayerSkills  => {
-                            jogadorAPI = dadosPlayerSkills;
-                            jogadorAPI.stats = skill.buildSkill();
-                            resolve(jogadorAPI);
+                            repositorio.getSalaryPlayer(dadosSerieA)
+                            .then(async dadosSalary  => {
+                                jogadorAPI = dadosPlayerSkills;
+                                jogadorAPI.stats = skill.buildSkill();
+                                jogadorAPI.salario = dadosSalary.salario;
+                                resolve(jogadorAPI);
+                        });
                     });
                     
                 });

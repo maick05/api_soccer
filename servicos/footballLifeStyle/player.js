@@ -1,9 +1,8 @@
 const cheerio = require('cheerio');
-const request = require('request');
 const config = require('config');
 const CurlService = require('../helpers/curlService');
-const stringHelper = require('../helpers/stringHelper');
-const puppeteer = require('puppeteer');
+const stringHelper = require('../../helpers/stringHelper');
+const dateHelper = require('../../helpers/dateHelper');
 const appRoot = require('app-root-path');
 const fs = require('fs');
 
@@ -19,17 +18,16 @@ class Player{
                 let link = '';
                 results.each(async function(){
                     let td = $(this).find('td').first().next();
-                    let nameFLS = stringHelper.retirarAcentos(td.find('a').text());
                     let idPlayer = td.find('a').attr('href');
                     var arrInfo = td.html().split('<br>');
-                    let clubFLS = stringHelper.retirarAcentos(arrInfo[1]);
-                    let dataNascFLS = arrInfo[3];
-       
+                    let clubFLS = stringHelper.retirarAcentos(arrInfo[1].trim());
+                    let dataNascFLS = dateHelper.formatDataDB(arrInfo[3].trim(), 'DD.MM.YYYY');
+
                     if(!alias.includes(clubFLS)){
                         return true;
                     }
-    
-                    if(true){
+                    
+                    if(data_nasc == dataNascFLS){
                         link = 'https://www.football-lifestyle.co.uk'+idPlayer;
                         return false;
                     }

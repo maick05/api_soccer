@@ -1,17 +1,17 @@
 const cheerio = require('cheerio');
 const config = require('config');
 const moment = require('moment');
-const stringHelper = require('../../helpers/stringHelper');
+const strHelper = require('../../helpers/stringHelper');
 const dateHelper = require('../../helpers/dateHelper');
 const appRoot = require('app-root-path');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
 class Player{
-    getExtraInfoPlayer(nome, club, data_nasc, pais, res){ 
-        this.searchPlayer(nome, club, data_nasc, pais).then(async (objUrl) => {
-            await this.getInfoFromPagePlayer(objUrl).then((retorno) => {
-                res.send(retorno);
+    getExtraInfoPlayer(nome, club, data_nasc, pais){ 
+        return new Promise((resolve, reject) => {
+            this.searchPlayer(nome, club, data_nasc, pais).then(async (objUrl) => {
+                resolve(this.getInfoFromPagePlayer(objUrl));
             });
         });
     }
@@ -32,34 +32,26 @@ class Player{
                     var data = await page.evaluate(() => document.querySelector('*').outerHTML);
                     var $ = cheerio.load(data);
                     var urlPlayer = await this.buscaUrlPesquisa(data, data_nasc, alias);
-                    // console.log('urlPlayer -> '  + urlPlayer);
-                    resolve(urlPlayer);
-                    return;
+                    
                     let i = 0;
-                    while(urlPlayer == '' && i <= 10){
+                    let fim = false;
+                    while(urlPlayer == '' && i <= 10 && !fim){
                         index++;
-                        if($('.gsc-cursor-page[aria-label="Page '+index+'"]').length > 0){
-                            await page.click('.gsc-cursor-page[aria-label="Page '+index+'"]');
-                            await page.waitForSelector('.gsc-cursor-page.gsc-cursor-current-page[aria-label="Page '+index+'"]');
+                        if($('.page[title="Página '+index+'"]').length > 0){
+                            await page.click('.page[title="Página '+index+'"]');
+                            await page.waitForSelector('.page.selected[title="Página '+index+'"]');
                         }else{
-                            ano--;
+                            fim = true;
                         }
 
-                        var data = await page.evaluate(() => document.querySelector('*').outerHTML);
+                        data = await page.evaluate(() => document.querySelector('*').outerHTML);
                         $ = cheerio.load(data);
-                        var urlPlayer = await this.buscaUrlPesquisa(data, ano, equipe);
+                        urlPlayer = await this.buscaUrlPesquisa(data, data_nasc, alias);
                         console.log('tentativa '+i);
                         i++;
-
-                        if(i== 10 && ano == '21'){
-                            i = 0;
-                            ano--;
-                        }
                     }
-        
-                    console.log(urlPlayer);
                     await browser.close();
-                    resolve({'url':urlPlayer, 'ano' : ano});
+                    resolve(urlPlayer);
                 });
             } catch (err) {
                 reject(err);
@@ -85,7 +77,7 @@ class Player{
                 element.dataRenovacaoContrato = $('table.auflistung').find('tr').eq(13).find('td').text().trim();
                 element.empresarios = $('table.auflistung').find('tr').eq(9).find('td').text().trim();
                 element.posicaoPrincipal = $('.hauptposition-left').html().split('<br>')[1].trim();
-                element.valor = $('.zeile-oben').find('.right-td').find('a').first().text();
+                element.valor = this.getValor($('*'));
                 resolve(element);
 
               } catch (err) {
@@ -94,19 +86,44 @@ class Player{
         });
     }
 
+    getValor(pagina){
+        let valor = pagina.find('.zeile-oben').find('.right-td').find('a').first().text();
+        valor = valor.replace(' €', '').replace(' ', '').replace(',', '.');
+        if(!valor){
+            return null;
+        }
+        let price = strHelper.extrairNumeros(valor);
+        let unidade = strHelper.extrairLetras(valor);
+        let fatorUnidade = this.getFatorByUnidade(unidade);
+        return price * fatorUnidade * 6.8;
+    }
+
+    getFatorByUnidade(str){
+        switch(str){
+            case 'mi':
+                return 1000000;
+                break;
+            default:
+                return 1
+                break;
+        }
+    }
+
     buscaUrlPesquisa(data, data_nasc, aliasClub){
         const contexto = this;
         const $ = cheerio.load(data);
-        var results = $('.spielprofil_tooltip.tooltipstered');
-        
-        var urlPlayer = '';
+        var results = $('.spielprofil_tooltip');
+
+        var urlPlayer = ''; 
         results.each(function(){
-            var clubTM = stringHelper.retirarAcentos($(this).parents('tr').eq(0).next().find('a').text().trim());
+            var clubTM = strHelper.retirarAcentos($(this).parents('tr').eq(0).next().find('a').text().trim());
+
             if(!aliasClub.includes(clubTM)){
                 return true;
             }
             
-            var idadeTM = $(this).parents('td:not(.hauptlink)').parent()    .find('.zentriert').eq(2).html();
+            var idadeTM = $(this).parents('td:not(.hauptlink)').parent().find('.zentriert').eq(2).html();
+            // var paisTM = $(this).parents('td:not(.hauptlink)').parent().find('.zentriert').eq(3).find('img').title().toLowerCase();
             var arrIdade = contexto.getArrIdade(data_nasc);
             if(arrIdade.includes(idadeTM)){
                 return true;
@@ -143,7 +160,7 @@ class Player{
                 data = JSON.parse(data)
 
                 if(!data[club]){
-                    resolve([]);
+                    resolve([club]);
                     return;
                 }
 

@@ -7,9 +7,9 @@ module.exports = app => {
         const club = req.params.club;
         const dataNasc = req.params.data_nasc;
         const pais = req.params.pais;
-        Player.getExtraInfoPlayer(nome, club, dataNasc, pais, res)
-    //         .then(retorno => {
-    //             res.send(retorno);
-    //         });
+        Player.getExtraInfoPlayer(nome, club, dataNasc, pais)
+            .then(retorno => {
+                res.send(retorno);
+            });
     })
 }

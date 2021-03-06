@@ -5,25 +5,51 @@ const BuildSkill = require('./builds/buildSkill');
 class Jogadores {
     buildPlayer(id) {
         return new Promise ( async (resolve, reject) => {
+            var retornos = {};
             repositorio.getStatsPorIdFake(id)
                 .then(async playerApi  => {
+                    console.log('rapid api');
                     var jogadorAPI = {};
-                    var dadosSerieA = playerApi.api.players[1];
-                    var skill = new BuildSkill(dadosSerieA);
+                    var dadosStats = this.getAllStatsBySeason(retorno.api.players);
+                    var skill = new BuildSkill(dadosStats);
 
-                    repositorio.getSkillsPlayer(dadosSerieA)
+                    repositorio.getSkillsPlayer(dadosStats)
                         .then(async dadosPlayerSkills  => {
-                            repositorio.getSalaryPlayer(dadosSerieA)
+                            console.log('fm db');
+                            repositorio.getSalaryPlayer(dadosStats)
                             .then(async dadosSalary  => {
-                                jogadorAPI = dadosPlayerSkills;
-                                jogadorAPI.stats = skill.buildSkill();
-                                jogadorAPI.salario = dadosSalary.salario;
-                                resolve(jogadorAPI);
+                                console.log('salary FLS');
+                                repositorio.getExtraInfoPlayer(dadosStats)
+                                    .then(extraInfo => {
+                                        console.log('transfer market');
+                                        jogadorAPI = dadosPlayerSkills.response;
+                                        jogadorAPI.stats = skill.buildSkill();
+                                        jogadorAPI.salario = dadosSalary.salario;
+                                        jogadorAPI.extra = extraInfo;
+                                        resolve(jogadorAPI);
+                                    });
+                            });
                         });
+                    
+                    });
+                });
+    }
+
+    getAllStatsBySeason(competicoes){
+        let dadosStats = retorno.api.players[0];
+        for(let i = 1; i < competicoes.length; i++){
+            let comp = competicoes[i];
+            Object.keys(comp).forEach(function(key){
+                if(typeof comp[key] === 'object' && comp[key] !== null){
+                    Object.keys(comp[key]).forEach(function(attrItem){
+                        dadosStats[key][attrItem] = dadosStats[key][attrItem] + comp[key][attrItem];    
                     });
                     
-                });
-        });
+                }
+            });
+        }
+
+        return dadosStats;
     }
 }
 

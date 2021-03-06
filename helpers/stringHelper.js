@@ -18,5 +18,13 @@ module.exports = {
             }
         }
         return novastr;
-    } 
+    },
+
+    extrairLetras(str){
+        return str.match(/[a-zA-Z]+/g).join();
+    },
+
+    extrairNumeros(str){
+        return parseFloat(str.replace( /^\D+/g, ''));
+    }
 }

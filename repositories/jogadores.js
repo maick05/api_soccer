@@ -32,8 +32,18 @@ class Jogadores {
             
             var body = await axios.get(`http://localhost:8082/football_life_style/player/${nome}/${time}/${dataNasc}`);
             resolve(body.data);
-        });
-        
+        }); 
+    }
+
+    getExtraInfoPlayer(dadosSerieA){
+        return new Promise ( async (resolve, rejected) => {
+            let nome = stringHelper.retirarAcentos(dadosSerieA.player_name);
+            let time = stringHelper.retirarAcentos(dadosSerieA.team_name);
+            let dataNasc = dateHelper.formatDataDB(dadosSerieA.birth_date);
+            
+            var body = await axios.get(`http://localhost:8082/transfer_market/player/${nome}/${time}/${dataNasc}/1`);
+            resolve(body.data);
+        }); 
     }
 
     getStatsPorIdFake(id){

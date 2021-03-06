@@ -2,6 +2,7 @@ const { resolve } = require('app-root-path');
 const cheerio = require('cheerio');
 const config = require('config');
 const puppeteer = require('puppeteer');
+const jsonRead = require('../../helpers/jsonRead');
 var arrMsgErr = [];
 var nameFound = '';
 class Player{
@@ -20,77 +21,78 @@ class Player{
             const anoAtual = ano;
             try {
                 var termo =(nome+' '+equipe).toLowerCase().replace(' ', '+');
-                console.log(nome);
-                console.log(equipe);
-                const browser = await puppeteer.launch({
-                    args: ['--disable-dev-shm-usage']
-                });
-
-                const [page] = await browser.pages();
-                let index = 1;
-                await page.goto('https://fmdataba.com/src.php?q='+termo, { waitUntil: 'networkidle0' });
-                var data = await page.evaluate(() => document.querySelector('*').outerHTML);
-                
-                var $ = cheerio.load(data);
-                console.log();
-                if($('.gs-no-results-result').length > 0){
-                    reject({
-                        'sucesso': false,
-                        'response': 'Erro ao pesquisar jogador, results não encontrado.',
-                        'retornos': arrMsgErr,
-                        'codErr': 'not_found_search'
+                jsonRead.getAliasClub(equipe).then(async alias => {
+                    console.log(nome);
+                    console.log(equipe);
+                    const browser = await puppeteer.launch({
+                        args: ['--disable-dev-shm-usage']
                     });
-                    return;
-                }
 
-                var urlPlayer = await this.buscaUrlPesquisa(data, ano, equipe);
-
-                let i = 0;
-                let fim = false;
-                let totalTry = 10;
-                while(urlPlayer == '' && i <= totalTry && !fim){
-                    index++;
-                    if($('.gsc-cursor-page[aria-label="Page '+index+'"]').length > 0){
-                        await page.click('.gsc-cursor-page[aria-label="Page '+index+'"]');
-                        await page.waitForSelector('.gsc-cursor-page.gsc-cursor-current-page:not([aria-label="Page '+(index-1)+'"])');
-                    }else{
-                        await page.click('.gsc-cursor-page[aria-label="Page 1"]');
-                        await page.waitForSelector('.gsc-cursor-page.gsc-cursor-current-page:not([aria-label="Page '+index+'"])');
-                        ano--;
-                    }
-
+                    const [page] = await browser.pages();
+                    let index = 1;
+                    await page.goto('https://fmdataba.com/src.php?q='+termo, { waitUntil: 'networkidle0' });
                     var data = await page.evaluate(() => document.querySelector('*').outerHTML);
-                    $ = cheerio.load(data);
-                    var urlPlayer = await this.buscaUrlPesquisa(data, ano, equipe);
-                    console.log('tentativa '+i);
-                    i++;
-
-                    if(i== totalTry && ano == (anoAtual-1)){
-                        fim = true;
+                    
+                    var $ = cheerio.load(data);
+                    if($('.gs-no-results-result').length > 0){
+                        reject({
+                            'sucesso': false,
+                            'response': 'Erro ao pesquisar jogador, results não encontrado.',
+                            'retornos': arrMsgErr,
+                            'codErr': 'not_found_search'
+                        });
+                        return;
                     }
-                }
-    
-                if(urlPlayer == ''){
-                    reject({
-                        'sucesso': false,
-                        'response': 'Erro ao pesquisar jogador, results não encontrado.',
-                        'retornos': arrMsgErr,
-                        'codErr': 'not_found_search_pages'
-                    });
-                    return;
-                }
-                console.log(urlPlayer);
-                
-                await browser.close();
-                resolve({'url':urlPlayer, 'ano' : ano});
-              } catch (err) {
+
+                    var urlPlayer = await this.buscaUrlPesquisa(data, ano, alias);
+
+                    let i = 0;
+                    let fim = false;
+                    let totalTry = 10;
+                    while(urlPlayer == '' && i <= totalTry && !fim){
+                        index++;
+                        if($('.gsc-cursor-page[aria-label="Page '+index+'"]').length > 0){
+                            await page.click('.gsc-cursor-page[aria-label="Page '+index+'"]');
+                            await page.waitForSelector('.gsc-cursor-page.gsc-cursor-current-page:not([aria-label="Page '+(index-1)+'"])');
+                        }else{
+                            await page.click('.gsc-cursor-page[aria-label="Page 1"]');
+                            await page.waitForSelector('.gsc-cursor-page.gsc-cursor-current-page:not([aria-label="Page '+index+'"])');
+                            ano--;
+                        }
+
+                        var data = await page.evaluate(() => document.querySelector('*').outerHTML);
+                        $ = cheerio.load(data);
+                        var urlPlayer = await this.buscaUrlPesquisa(data, ano, alias);
+                        console.log('tentativa '+i);
+                        i++;
+
+                        if(i== totalTry && ano == (anoAtual-1)){
+                            fim = true;
+                        }
+                    }
+        
+                    if(urlPlayer == ''){
+                        reject({
+                            'sucesso': false,
+                            'response': 'Erro ao pesquisar jogador, results não encontrado.',
+                            'retornos': arrMsgErr,
+                            'codErr': 'not_found_search_pages'
+                        });
+                        return;
+                    }
+                    console.log(urlPlayer);
+                    
+                    await browser.close();
+                    resolve({'url':urlPlayer, 'ano' : ano});
+                }).catch(err => reject(err));
+            } catch (err) {
                 reject({
                     'sucesso': false,
                     'response': 'Erro ao pesquisar jogador. '+err,
                     'retornos': arrMsgErr,
                     'codErr': 'not_found_search_jserr'
                 });
-              }
+            }
         });
     }
 
@@ -201,7 +203,7 @@ class Player{
         return skills;
     }
 
-    buscaUrlPesquisa(data, ano, equipe){
+    buscaUrlPesquisa(data, ano, alias){
         const contexto = this;
         const $ = cheerio.load(data);
         var results = $('.gsc-webResult.gsc-result');
@@ -238,7 +240,7 @@ class Player{
                 }
                 var club = clubEl.last().text();
                 club = contexto.retiraAcentos(club.replace(' › ', '').trim());
-                if(club == equipe){
+                if(alias.includes(club)){
                     urlPlayer = 'https://'+link;
                     return false;
                 }

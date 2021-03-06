@@ -10,7 +10,7 @@ class Jogadores {
                 .then(async playerApi  => {
                     console.log('rapid api');
                     var jogadorAPI = {};
-                    var dadosStats = this.getAllStatsBySeason(retorno.api.players);
+                    var dadosStats = this.getAllStatsBySeason(playerApi.api.players);
                     var skill = new BuildSkill(dadosStats);
 
                     repositorio.getSkillsPlayer(dadosStats)
@@ -24,7 +24,7 @@ class Jogadores {
                                         console.log('transfer market');
                                         jogadorAPI = dadosPlayerSkills.response;
                                         jogadorAPI.stats = skill.buildSkill();
-                                        jogadorAPI.salario = dadosSalary.salario;
+                                        jogadorAPI.salario = dadosSalary.response;
                                         jogadorAPI.extra = extraInfo;
                                         resolve(jogadorAPI);
                                     });
@@ -36,7 +36,7 @@ class Jogadores {
     }
 
     getAllStatsBySeason(competicoes){
-        let dadosStats = retorno.api.players[0];
+        let dadosStats = competicoes[0];
         for(let i = 1; i < competicoes.length; i++){
             let comp = competicoes[i];
             Object.keys(comp).forEach(function(key){

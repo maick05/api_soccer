@@ -113,7 +113,7 @@ class Player{
                 element.skills = contexto.getSkills($('*'));
                 element.marketValue = contexto.getPrice($('*'));
                 element.positions = contexto.getPositions($('*'), ano);
-
+                await browser.close();
                 resolve(element);
 
               } catch (err) {

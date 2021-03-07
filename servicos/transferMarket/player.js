@@ -6,13 +6,17 @@ const dateHelper = require('../../helpers/dateHelper');
 const appRoot = require('app-root-path');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+var nameFound = '';
+var arrMsgErr = [];
 
 class Player{
     getExtraInfoPlayer(nome, club, data_nasc, pais){ 
         return new Promise((resolve, reject) => {
             this.searchPlayer(nome, club, data_nasc, pais).then(async (objUrl) => {
-                resolve(this.getInfoFromPagePlayer(objUrl));
-            });
+                this.getInfoFromPagePlayer(objUrl)
+                    .then(retorno => resolve(retorno))
+                    .catch(err => reject(err));
+            }).catch(err => reject(err));
         });
     }
 
@@ -28,9 +32,20 @@ class Player{
                     const [page] = await browser.pages();
                     let index = 1;
 
-                    await page.goto('https://www.transfermarkt.com.br/schnellsuche/ergebnis/schnellsuche?query='+termo, { waitUntil: 'networkidle0' });
+                    await page.goto('https://www.transfermarkt.com.br/schnellsuche/ergebnis/schnellsuche?query='+termo, { waitUntil: 'networkidle0' , timeout: 90000});
                     var data = await page.evaluate(() => document.querySelector('*').outerHTML);
                     var $ = cheerio.load(data);
+                    if($('.spielprofil_tooltip').length == 0){
+                        reject({
+                            'sucesso': false,
+                            'response': 'Erro ao pesquisar jogador, results não encontrado.',
+                            'retornos': arrMsgErr,
+                            'codErr': 'not_found_search'
+                        });
+                        return;
+                    }
+
+
                     var urlPlayer = await this.buscaUrlPesquisa(data, data_nasc, alias);
                     
                     let i = 0;
@@ -54,7 +69,12 @@ class Player{
                     resolve(urlPlayer);
                 });
             } catch (err) {
-                reject(err);
+                reject({
+                    'sucesso': false,
+                    'response': 'Erro ao pesquisar jogador. '+err,
+                    'retornos': arrMsgErr,
+                    'codErr': 'not_found_search_jserr'
+                });
             }
         });
     }
@@ -72,21 +92,54 @@ class Player{
                 const data = await page.evaluate(() => document.querySelector('*').outerHTML);
                 var $ = cheerio.load(data);
                 var element = {};
+                if($('table.auflistung').find('tr').length < 14){
+                    reject({
+                        'sucesso': false,
+                        'response': 'Erro ao pegar informações jogador.',
+                        'retornos': arrMsgErr,
+                        'nameFound': nameFound,
+                        'codErr': 'cant_get infopage'
+                    });
+                    return;
+                }
+
+                nameFound = $('table.auflistung').find('tr').eq(1).find('td').text().trim();
+                nameFound = urlPlayer.split('/')[urlPlayer.split('/').length-1]+'_'+nameFound;
                 element.dataFimContrato = $('table.auflistung').find('tr').eq(12).find('td').text().trim();
                 element.dataInicioContrato = $('table.auflistung').find('tr').eq(11).find('td').text().trim();
                 element.dataRenovacaoContrato = $('table.auflistung').find('tr').eq(13).find('td').text().trim();
                 element.empresarios = $('table.auflistung').find('tr').eq(9).find('td').text().trim();
-                element.posicaoPrincipal = $('.hauptposition-left').html().split('<br>')[1].trim();
+                if($('.hauptposition-left').html().split('<br>').length < 2){
+                    arrMsgErr.push('Posição principal não encontrada');
+                }else{
+                    element.posicaoPrincipal = $('.hauptposition-left').html().split('<br>')[1].trim();
+                }
                 element.valor = this.getValor($('*'));
-                resolve(element);
+                await browser.close();
+                resolve({
+                    'sucesso': true,
+                    'response': element,
+                    'nameFound': nameFound,
+                    'retornos': arrMsgErr
+                });
 
               } catch (err) {
-                reject(err);
+                reject({
+                    'sucesso': false,
+                    'response': 'Erro ao pegar informações jogador. '+err,
+                    'retornos': arrMsgErr,
+                    'nameFound': nameFound,
+                    'codErr': 'cant_get infopage_jserr'
+                });
               }
         });
     }
 
     getValor(pagina){
+        if(pagina.find('.zeile-oben').find('.right-td').find('a').length == 0){
+            arrMsgErr.push('Valor não encontrado');
+            return null;
+        }
         let valor = pagina.find('.zeile-oben').find('.right-td').find('a').first().text();
         valor = valor.replace(' €', '').replace(' ', '').replace(',', '.');
         if(!valor){
@@ -115,10 +168,21 @@ class Player{
         var results = $('.spielprofil_tooltip');
 
         var urlPlayer = ''; 
+        var pos = 0;
         results.each(function(){
+            pos++;
+            if($(this).parents('tr').eq(0).next().find('a').length == 0){
+                arrMsgErr.push('Club não encontrado.  pos=>'+pos);
+                return true;
+            }
             var clubTM = strHelper.retirarAcentos($(this).parents('tr').eq(0).next().find('a').text().trim());
 
             if(!aliasClub.includes(clubTM)){
+                return true;
+            }
+
+            if($(this).parents('td:not(.hauptlink)').parent().find('.zentriert').length == 0){
+                arrMsgErr.push('Idade não encontrada.  pos=>'+pos);
                 return true;
             }
             

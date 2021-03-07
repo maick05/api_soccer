@@ -22,10 +22,14 @@ class Jogadores {
                                 repositorio.getExtraInfoPlayer(dadosStats)
                                     .then(extraInfo => {
                                         console.log('transfer market');
-                                        jogadorAPI = dadosPlayerSkills.response;
+                                        if(dadosPlayerSkills.sucesso){
+                                            jogadorAPI = dadosPlayerSkills.response;
+                                        }else{
+                                            jogadorAPI.skills = dadosPlayerSkills.response;
+                                        }
                                         jogadorAPI.stats = skill.buildSkill();
                                         jogadorAPI.salario = dadosSalary.response;
-                                        jogadorAPI.extra = extraInfo;
+                                        jogadorAPI.extra = extraInfo.response;
                                         resolve(jogadorAPI);
                                     });
                             });

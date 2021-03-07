@@ -10,6 +10,6 @@ module.exports = app => {
         Player.getExtraInfoPlayer(nome, club, dataNasc, pais)
             .then(retorno => {
                 res.send(retorno);
-            });
+            }).catch(err => res.send(err));
     })
 }
